@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Process State Trace</title>
+    <style>
+        .btn{
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #000;
+            background-color: #9c4f4f;
+            color: white;
+            cursor: pointer;
+        }
+
+        .btn:hover{
+            background-color: #986e6e;
+            color: white;
+        }
+
+        .btn-run{
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #000;
+            background-color: #4f9c4f;
+            color: white;
+            cursor: pointer;
+            margin-left: 15px;
+        }
+
+        .btn-run:hover{
+            background-color: #6e986e;
+            color: white;
+        }
+
+        .process-info {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .process-info input {
+            margin-bottom: 10px;
+        }
+
+        .dispatcher-info {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .dispatcher-info input {
+            margin-bottom: 10px;
+        }
+
+        .container-results{
+            margin-top: 30px;
+            display: flex;
+            flex-direction: row;
+            justify-content: space-around;
+        }
+
+        #processInfo {
+            width: 400px;
+        }
+
+        .img{
+            width: 500px;
+        }
+    </style>
+</head>
+<body>
+    <img src="./logo_horizontal.jpeg" class="img"/>
+    <h1>Process State Trace</h1>
+    
+    <div class="process-info">
+        <label for="processInfo">Process Info</label>
+        <input type="text" id="processInfo">
+        <button id="submit" class="btn">Add information process</button>
+    </div>
+
+    <div class="dispatcher-info">
+        <form id="render-form">
+            <label for="dispatcher-cycles">Dispatcher Cycles</label>
+            <input type="text" id="dispatcher-cycles" required>
+
+            <label for="interrupts-cycles">Interrupt Cycles (Time Slot)</label>
+            <input type="text" id="interrupts-cycles" required>
+
+            <label for="interrupts-cycles">Number of instructions to show</label>
+            <input type="text" id="nInstructions" value="10">
+
+            <button id="render" class="btn-run">Dispatcher run</button>
+        </form>
+    </div>
+
+    <table id="show-info-process">
+        <thead>
+            <tr>
+                <th>Process ID</th>
+                <th>content</th>
+            </tr>
+        </thead>
+    </table>
+
+    <div class="container-results">
+        <div id="tableResults">
+            <h2>Trace for all processes</h2>
+            <table id="results">
+    
+            </table>
+
+            <div>
+                <h3>System information</h3>
+                <p>Process running: <span id="running"></span></p>
+                <p>Ready Queue: <span id="ready"></span></p>
+                <p>Block Queue: <span id="block"></span></p>
+            </div>
+        </div>
+    
+        <div id="traceContainer">
+            <h2>Trace Processor</h2>
+            <table id="traceProcessor"></table>
+        </div>
+    </div>
+
+    <script>
+        // Input process info and dispatcher info
+        const processInfo = document.getElementById('processInfo');
+        const submitProcess = document.getElementById('submit');
+        const showInfoProcess = document.getElementById('show-info-process');
+
+        const processes = [];
+        
+        // Show processes info in table
+        submitProcess.addEventListener('click', (e) => {
+            e.preventDefault();
+            processes.push(processInfo.value);
+            const tr = document.createElement('tr');
+            const processId = document.createElement('td');
+            const processContent = document.createElement('td');
+            processId.textContent = `process-${processes.length-1}`;
+            processContent.textContent = processInfo.value;
+            tr.appendChild(processId);
+            tr.appendChild(processContent);
+            showInfoProcess.appendChild(tr);
+            processInfo.value = '';
+        });
+
+    let limitCyclesDispatcher;
+
+    function algorithmForTrace(){
+        /* From here initiate algorithm */
+        const processesInfo = {
+            dispatcher: {
+                currentState: "ready",
+                instructions: []
+            }
+        }
+        let processInsideSystem = ["dispatcher"]
+        const dispatchInfo = {
+            readyQueue: [],
+            blockQueue: [],
+            running:""
+        }
+        const states = {
+            running: "🟩",
+            ready: "⬜️",
+            block: "🟥",
+            finish: "🟨"
+        }
+
+        const results = {
+            'dispatcher': []
+        } 
+
+        const cyclesDispatcher = document.querySelector('#dispatcher-cycles').value;
+        const cyclesInterrupts = document.querySelector('#interrupts-cycles').value;
+        limitCyclesDispatcher = cyclesDispatcher;
+
+
+        for(let i=100; i<(100+cyclesDispatcher); i++){
+            processesInfo['dispatcher'].instructions.push(i);
+        }
+
+        const NUMBER_INSTRUCTION_CYCLES = document.querySelector('#nInstructions').value;
+
+        //Init PROCESS INFO AND DISPATCHER INFO
+        console.log(processes)
+        processes.forEach((p, index) => {
+            const labelProcess = `p-${index}`
+            processesInfo[labelProcess] = {
+                trace: p.split(","),
+                pointer: 0,
+                currentState: "ready"
+            }
+            processInsideSystem.push(labelProcess)
+            dispatchInfo.readyQueue.push(labelProcess)
+            
+            results[labelProcess] = []
+        })
+
+        processInsideSystem
+
+        dispatchInfo.running = dispatchInfo.readyQueue.shift();
+        const traceProcessorResult = [];
+        for(let time=1; time<=NUMBER_INSTRUCTION_CYCLES; time++){
+            if(dispatchInfo.running === undefined)
+                break;
+        
+            const instruction = processesInfo[dispatchInfo.running].trace.shift();
+            addTraceProcessor(instruction, dispatchInfo.running)
+            
+            if(instruction === "I"){
+                results[dispatchInfo.running].push("🟥")
+                processesInfo[dispatchInfo.running].currentState = "block"
+                dispatchInfo.blockQueue.push(dispatchInfo.running);
+                time = dispatcherExecution(processesInfo, states, results, time) - 1;
+                continue;
+            }else if(instruction === "F"){
+                results[dispatchInfo.running].push("🟨")
+                processesInfo[dispatchInfo.running].currentState = "finish"
+                processInsideSystem = processInsideSystem.filter(p => p !== dispatchInfo.running)
+                time = dispatcherExecution(processesInfo, states, results, time) - 1;
+                continue;
+            }else if(instruction === "T"){
+                processesInfo[dispatchInfo.running].currentState = "ready"
+                dispatchInfo.readyQueue.push(dispatchInfo.running);
+                time = dispatcherExecution(processesInfo, states, results, time) - 1;
+                continue;
+            }else{
+                results[dispatchInfo.running].push("🟩")
+                processesInfo[dispatchInfo.running].currentState = "running"
+            }
+        
+            processInsideSystem.forEach(p => {
+                if(p !== dispatchInfo.running)
+                    results[p].push(states[processesInfo[p].currentState]);
+            })
+        }
+
+        function dispatcherExecution(processesInfo, states, results, currentTime) {
+            dispatchInfo.running = "dispatcher"
+            processesInfo[dispatchInfo.running].currentState = "running"
+            let d;
+            let i = 0;
+            for(d=currentTime; d<=NUMBER_INSTRUCTION_CYCLES && d<=(currentTime+(cyclesDispatcher-1)); d++){
+                addTraceProcessor(processesInfo[dispatchInfo.running].instructions[i++], "dispatcher");
+                processInsideSystem.forEach(p => {
+                    results[p].push(states[processesInfo[p].currentState]);
+                })
+            }
+                if(d <= NUMBER_INSTRUCTION_CYCLES){
+                    processesInfo["dispatcher"].currentState = "ready"
+                    dispatchInfo.running = dispatchInfo.readyQueue.shift();
+
+                    if(dispatchInfo.blockQueue.length > 0){
+                        const blockedProc = dispatchInfo.blockQueue.shift();
+                        wakeUpBlockProcess(blockedProc);
+                        results[blockedProc].pop();
+                    }
+                }
+            return d;
+        }
+
+        function wakeUpBlockProcess(process){
+            if(!processesInfo[process].trace[0]){
+                dispatchInfo.blockQueue.push(process)
+            }else{
+                processesInfo[process].currentState = "ready"
+                dispatchInfo.readyQueue.push(process);
+            }
+        }
+
+        function addTraceProcessor(instruction, process){
+            switch(instruction){
+                case "T":
+                traceProcessorResult.push("--TIME-OUT")
+                break;
+                case "I":
+                traceProcessorResult.push("--I/O request")
+                break;
+                case "F":
+                traceProcessorResult.push("--End of process")
+                break;
+                default:
+                traceProcessorResult.push(`${instruction} - ${process}`);
+            }
+        }
+
+        return {results, traceProcessorResult, dispatchInfo};
+    }
+
+    function clean(){
+        while (tableResults.firstChild) {
+            tableResults.removeChild(tableResults.firstChild);
+        }
+
+        while (traceProcessor.firstChild) {
+            traceProcessor.removeChild(traceProcessor.firstChild);
+        }
+
+        document.querySelector('#ready').textContent = "";
+        document.querySelector('#block').textContent = "";
+    }
+
+    const renderButton = document.querySelector('#render');
+    const renderForm = document.querySelector('#render-form');
+
+    const tableResults = document.querySelector('#results');
+    const traceProcessor = document.querySelector('#traceProcessor');
+
+    renderForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        clean();
+
+        const {results, traceProcessorResult, dispatchInfo} = algorithmForTrace();
+
+        const limit = document.querySelector('#nInstructions').value;
+        const trn = document.createElement('tr');
+        const empty = document.createElement('td');
+        trn.appendChild(empty);
+        for(let i=1; i<=limit; i++){
+            const td = document.createElement('td');
+            td.textContent = i;
+            trn.appendChild(td);
+        }
+        tableResults.appendChild(trn);
+
+
+        Object.keys(results).forEach(processName => {
+            const tr = document.createElement('tr');
+            const processId = document.createElement('td');
+            processId.textContent = processName;
+            tr.appendChild(processId);
+
+            results[processName].forEach(trace => {
+                const td = document.createElement('td');
+                td.textContent = trace;
+                tr.appendChild(td);
+            })
+
+            tableResults.appendChild(tr);
+        })
+
+
+        let i = 1;
+        traceProcessorResult.forEach(trace => {
+            const tr = document.createElement('tr');
+            const td = document.createElement('td');
+            
+            if(trace.includes("--")){
+                td.textContent = trace;
+            }else{
+                td.textContent = `${i++} - ${trace}`;
+            }
+
+            let getTrace = trace.split(" ")[0];
+            if(getTrace >= 100 && getTrace < (100 + parseInt(limitCyclesDispatcher)))
+                td.style.backgroundColor = "#8ade52";
+
+            tr.appendChild(td);
+            traceProcessor.appendChild(tr);
+        })
+
+        document.querySelector('#running').textContent = dispatchInfo.running;
+
+        document.querySelector('#ready').textContent = "["+dispatchInfo.readyQueue.join(", ")+"]";
+
+        document.querySelector('#block').textContent = "["+dispatchInfo.blockQueue.join(", ")+"]";
+    })
+
+    </script>
+</body>
+</html>
