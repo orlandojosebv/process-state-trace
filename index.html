@@ -426,6 +426,32 @@ function correctSeq(infoProcess){
   return true;
 }
 
+const globalSet = new Set(); // Esto lo hice para tener un conjunto general, para que se pueda consultar si ya existe
+                            //El número, por lo que lo dejé para que lo vieras.
+function noRepetitionMemory(infoProcess){
+  for(const p of infoProcess){
+    if (typeof p === "number"){
+      if(globalSet.has(p)){
+        return false;//El número de dirección de memoria ya está siendo utilizado por otro proceso, por lo que no es permitido. 
+      }
+      globalSet.add(p);
+    }
+  }
+  return true; //No hay repetidos, por lo que las direcciones de memoria están bien.
+}
+
+function correctSeqNumbers(infoProcess){
+  let last=null;
+  for (const p of infoProcess){
+    if (typeof p === "number"){
+      if(last !== null && p !== last + 1){
+        return false; //No es consecuente el número, no sigue la secuencia. Las direcciones de memoria no están seguidas.
+      }
+      last = p;
+    }
+  }
+  return true; //Todos los números están en una correc
+}
     </script>
 </body>
 </html>
