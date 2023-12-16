@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Process State Trace</title>
-    <style>
+    <style>     
         .btn{
             padding: 10px;
             border-radius: 5px;
@@ -142,6 +142,8 @@
             const processId = document.createElement('td');
             const processContent = document.createElement('td');
             processId.textContent = `process-${processes.length-1}`;
+
+            //se requerirá validación
             processContent.textContent = processInfo.value;
             tr.appendChild(processId);
             tr.appendChild(processContent);
@@ -371,6 +373,58 @@
 
         document.querySelector('#block').textContent = "["+dispatchInfo.blockQueue.join(", ")+"]";
     })
+
+function validStartEnd(process) {
+    let inicio = 0;
+    let final = process.length - 1;
+    if (
+        process[inicio] === "I" || process[inicio] === "F" ||process[inicio] === "T") {
+        return false;
+  } else if (process[final] === "T" || process[final] === "I") {
+            return false;
+  } else {
+            return true;
+  }
+}
+
+function validNormalFinalization(process) {
+  let finalization = "F";
+  for (let i = 0; i < process.length; i++) {
+    if (process[i] === "F") {
+      for (let j = i + 1; j < process.length; j++) {
+        if (process[j] != undefined){
+          return false //Si hay algo después, no es válido
+        }
+      }
+      return true; //Si no hay nada después, es válido
+    }
+  }
+  return false; //El proceso no tiene finalización
+}
+
+function allowedInfo(infoProcess){
+  for(let i=0;i<infoProcess.length;i++){
+    const e=infoProcess[i];
+    if(typeof e !== "number" && !isAllowedLetter(e)){
+      return false; //NO es permitido.
+    }
+  }
+  return true;//Está correcto.
+}
+
+function isAllowedLetter(letter){
+  const l=["T","F","I"];
+  return l.includes(letter);
+}
+
+function correctSeq(infoProcess){
+  for(let i=0;i<infoProcess.length;i++){
+    if((infoProcess[i] === "I" || infoProcess[i] === "T") && infoProcess[i+1] === "F"){
+      return false; //No es válido porque luego de una I o T, no puede haber una F
+    }
+  }
+  return true;
+}
 
     </script>
 </body>
