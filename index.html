@@ -457,6 +457,12 @@ function correctCycles(dispatcher,interrupt){
   return dispatcher <= interrupt;
 }
 
+function memoryDispatcher(dispatcher){
+  for (let i=100;i<100+dispatcher;i++){
+    globalSet.add(i);
+  } //Las direcciones de memoria ingresados deben ser diferente a las direcciones de memoria del dispatcher
+}
+
     </script>
 </body>
 </html>
